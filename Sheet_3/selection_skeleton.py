@@ -15,18 +15,29 @@ def ex_1_a(signal, background):
         plt.show()
 
 
-def fisher_score(data1, data2):
-    rows, cols = data1.shape
-    fisher = np.zeros((0, cols))
-    mu = np.mean(data1)
-    sig = np.std(data1)
-    means = np.mean(data1, axis=0)
-    stds = np.std(data1, axis=0)
-    print(len(means))
+def fisher_score(signal, background):
+    merged = np.concatenate((signal, background))
+    rows, cols = signal.shape
+    n = rows
+    mu = np.mean(merged)
+    sigma = np.std(merged)
+    mean_s = np.mean(signal, axis=0)
+    mean_b = np.mean(background, axis=0)
+    fisher = n*((mean_s-mu)**2+(mean_b-mu)**2)/sigma**2
+    return fisher
 
 
 def ex_1_b(signal, background):
-    fisher_score(signal)
+    features = np.asarray(["f0", "f1", "f2", "f3", "f4", "f5", "f6"])
+    f_score = fisher_score(signal, background)
+    index = np.flip(f_score.argsort(axis=0))
+    np.take_along_axis(f_score, index, axis=0) 
+    ranked_features = np.take_along_axis(features, index, axis=0)
+    
+    index2 = np.repeat(np.atleast_2d(index),10000, axis=0)
+    ranked_signal = np.take_along_axis(signal, index2, axis=1)
+    ranked_background = np.take_along_axis(background, index2, axis=1)
+
 
 def ex_1(signal, background):
     print("Excercise 1.a)")
