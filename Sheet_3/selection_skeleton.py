@@ -2,6 +2,10 @@ import numpy as np
 from math import sqrt
 import matplotlib.pyplot as plt
 import pandas as pd
+from scipy.optimize import minimize
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.metrics import classification_report, roc_auc_score
 
 def ex_1_a(signal, background):
     length = int(signal.shape[1])
@@ -28,22 +32,105 @@ def fisher_score(signal, background):
 
 
 def ex_1_b(signal, background):
-    features = np.asarray(["f0", "f1", "f2", "f3", "f4", "f5", "f6"])
+    features = np.asarray(["PT1", "PT2", "P1", "P2", "TotalPT", "VertexChisq", "Isolation"])
     f_score = fisher_score(signal, background)
     index = np.flip(f_score.argsort(axis=0))
-    np.take_along_axis(f_score, index, axis=0) 
+    ranked_score = np.take_along_axis(f_score, index, axis=0) 
     ranked_features = np.take_along_axis(features, index, axis=0)
     
     index2 = np.repeat(np.atleast_2d(index),10000, axis=0)
     ranked_signal = np.take_along_axis(signal, index2, axis=1)
     ranked_background = np.take_along_axis(background, index2, axis=1)
+    print("Ranked features:")
+    print(ranked_features)
+    print("Ranked Scores:")
+    print(ranked_score)
 
 
+def ex_1_c():
+    signal_df = pd.read_csv('signal.txt', sep=" ")
+    columns = ["PT1", "PT2", "P1", "P2", "TotalPT", "VertexChisq", "Isolation"]
+    signal_df.columns = columns
+    background_df = pd.read_csv('background.txt', sep=" ")
+    background_df.columns = columns
+    best_three = ['TotalPT','Isolation', 'VertexChisq']
+    sig = signal_df[best_three]
+    back = background_df[best_three]
+    back_max = [back[i].max() for i in back]
+    back_min = [back[i].min() for i in back]
+    sig_max = [sig[i].max() for i in sig]
+    sig_min = [sig[i].min() for i in sig]
+    mix_max = [max(els) for els in zip(back_max, sig_max)]
+    mix_min = [min(els) for els in zip(back_min, sig_min)]
+    d_a = (mix_min[0], mix_max[0])
+    d_b = d_a
+    d_c = (mix_min[1], mix_max[1])
+    d_d = d_c
+    d_e = (mix_min[2], mix_max[2])
+    d_f = d_e
+    bnd = (d_a, d_b, d_c, d_d, d_e, d_f)
+    def minimize_metric(vals):
+        a, b, c, d, e, f = vals
+        selection_cut = '@a < TotalPT < @b and @c < Isolation < @d and @e < VertexChisq < @f'    
+        signal_select = sig.query(selection_cut)
+        background_select = back.query(selection_cut)
+        signal_efficiency = len(signal_select)*1.0/len(sig)
+        background_efficiency = len(background_select)*1.0/len(back)
+        TP = len(sig)*signal_efficiency
+        FP = len(sig)*(1-signal_efficiency)
+        TN = len(back)*(1-background_efficiency)
+        FN = len(back)*background_efficiency
+
+        return 1 - (TP+TN)/(TP+FP+TN+FN)
+
+    x0 = [2012, 35000, -1.9, 0.62, 0.031, 29]
+    res = minimize(minimize_metric, x0, method='nelder-mead', bounds=bnd, tol=1e-6)
+    print("Excercise 1.c)") 
+    print("Minimized values for cutting the tree highest features:") 
+    print(res.x)  
+    print(f"Resulting in a max accuricy of {1-res.fun}") 
+
+
+def ex_1_d():
+    columns = ["PT1", "PT2", "P1", "P2", "TotalPT", "VertexChisq", "Isolation"]
+    signal = np.loadtxt("signal.txt")
+    background = np.loadtxt("background.txt")
+
+    #Combine the signal and background into one dataset
+    X = np.concatenate((signal, background))
+    #Add a label dataset y, which tells the BDT what to aim for (i.e. BDT value should be 1 for signal and 0 for background).
+    y = np.concatenate((np.ones(signal.shape[0]),
+                        np.zeros(background.shape[0])))
+
+    #VERY IMPORTANT!!! Split the sample into a testing and training sample, you cannot test your BDT on the same sample as that will bias the result
+    from sklearn.model_selection import train_test_split
+    X_train,X_test, y_train,y_test = train_test_split(X, y, test_size=0.25, random_state=492)
+
+    #Make a BDT
+    dt = DecisionTreeClassifier(max_depth=2, min_samples_leaf=int(0.01*len(X)))
+    bdt = AdaBoostClassifier(dt,
+                            algorithm='SAMME',
+                            n_estimators=50,
+                            learning_rate=0.1)
+
+    #Optimise the parameters of the weights using the training sample
+    bdt.fit(X_train, y_train)
+
+    #Test the bdt parameters on the test sample
+    y_predicted = bdt.predict(X_test)
+    #This can be used to add the BDT and label columns to your dataset.
+    df = pd.DataFrame(np.hstack((X_test, y_predicted.reshape(y_predicted.shape[0], -1),y_test.reshape(y_test.shape[0],-1))),
+                    columns=columns+['BDT val','Label'])
+    print(df) 
+    
+    
 def ex_1(signal, background):
     print("Excercise 1.a)")
     #ex_1_a(signal, background)
     print("Excercise 1.b)")
-    ex_1_b(signal, background)
+    #ex_1_b(signal, background)
+    #ex_1_c()
+    ex_1_d()
 
 """
 #Here we read the txt file as a pandas 'DataFrame'
