@@ -8,6 +8,8 @@ c = 299792458
 maxx = np.amax(deca)
 minn = np.amin(deca)
 
+
+
 mu_k_new = 562.2512 #fitting from Cédric
 
 tau_k = 1.238*10**(-8) #Source Wikipedia
