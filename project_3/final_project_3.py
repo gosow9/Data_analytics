@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import timeit
-from typing import Callable, Union
+from typing import Union
 
 from scipy.optimize import minimize
 import numdifftools as ndt
@@ -78,7 +77,25 @@ def plot_fit_mixed_exp(pdf, data, y2, error, y1=AVG_DECAY_LENGTH_PI_PLUS):
     plt.savefig("img/Histogram_fit_mixed_exp.pgf")
 
     
-    
+def plot_fit_error(pdf, data, y2, error, y1=AVG_DECAY_LENGTH_PI_PLUS):
+    x_axis = data[::100]
+    plt.figure("Histogram mixed exponential pdf", figsize=(6.4, 4))
+    plt.plot(x_axis, pdf(y2, (y1, x_axis)),"--", color="red",
+             linewidth=0.5,
+             label=(r"$0.84\cdot\lambda_{\pi^{+}} e^{-\lambda_{\pi^{+}} \cdot x}"+
+             r"+0.16\cdot\lambda_{K^{+}} e^{-\lambda_{K^{+}} \cdot x}$"))
+    plt.fill_between(x_axis, pdf(y2-error, (y1, x_axis)),
+                     pdf(y2+error, (y1, x_axis)),
+                     color='red',
+                     alpha=0.3,
+                     label=r"Error band $\pm$"+str(round(error, 4)))
+    plt.hist(data, bins=200, density=True,
+             label="Normalized histrogram of measurement")
+    plt.xlabel(r'Decay length $[m]$')
+    plt.ylabel(r'Probability density $p(x)$')
+    plt.legend()
+    plt.savefig("img/Histogram_fit_mixed_exp.png",dpi=1200)
+    plt.savefig("img/Histogram_fit_mixed_exp.pgf")   
     
     
     
