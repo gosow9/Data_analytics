@@ -105,12 +105,12 @@ if __name__ == "__main__":
     data = np.sort(data)
     params_mixed_exp = [AVG_DECAY_LENGTH_PI_PLUS, data]
     bounds_mixed_exp_fit = (0, None)
-    res_neg_log = minimize(neg_log_likelihood_mixed_exp,
+    res_neg_log_fit = minimize(neg_log_likelihood_mixed_exp,
                            method='Powell',
-                           x0=(0.1),
+                           x0=(500.0),
                            bounds=(bounds_mixed_exp_fit,),
                            args=params_mixed_exp)
-    fit_avg_decay_length_k_plus = res_neg_log.x[0]
+    fit_avg_decay_length_k_plus = res_neg_log_fit.x[0]
     hessian_nll_mixed_exp = ndt.Hessian(neg_log_likelihood_mixed_exp)
     hessian_matrix = hessian_nll_mixed_exp(fit_avg_decay_length_k_plus,
                                            params_mixed_exp)
